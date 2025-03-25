@@ -27,10 +27,36 @@ Full guide (with code and steps) to set up a **ReactJS frontend** and **Node.js 
 ### **2. Connect to EC2 and Install Required Packages**
 
 ```bash
+cd Downloads
+chmod 400 full-stack.pem
+ssh -i "full-stack.pem" ec2-user@ec2-34-205-16-42.compute-1.amazonaws.com
+```
+```
 sudo yum update -y
-sudo yum install -y git curl
-curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-sudo yum install -y nodejs nginx
+sudo yum install git -y
+git --version
+sudo yum install curl -y
+curl --version
+sudo yum install nginx -y 
+nginx -v
+```
+```
+# Download and install nvm:
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+
+# in lieu of restarting the shell
+\. "$HOME/.nvm/nvm.sh"
+
+# Download and install Node.js:
+nvm install 22
+
+# Verify the Node.js version:
+node -v # Should print "v22.14.0".
+nvm current # Should print "v22.14.0".
+
+# Verify npm version:
+npm -v # Should print "10.9.2".
+
 ```
 
 > ⚠️ Node 18 is stable and compatible with most React/Express apps.
@@ -41,13 +67,13 @@ sudo yum install -y nodejs nginx
 
 ```bash
 cd /home/ec2-user
-git clone https://github.com/your-username/your-fullstack-repo.git
-cd your-fullstack-repo
+git clone https://github.com/atulkamble/aws-fullstack-cicd.git
+cd aws-fullstack-cicd
 ```
 
 📁 Structure should be something like:
 ```
-your-fullstack-repo/
+aws-fullstack-cicd/
 │
 ├── client/     ← React App
 └── server/     ← Node.js Express API
@@ -233,4 +259,5 @@ pm2 save
 ```
 
 ---
+
 

@@ -85,8 +85,15 @@ aws-fullstack-cicd/
 
 ```bash
 cd client
+npm init
+npm run
+
 npm install
+npm install react-scripts --save
 npm run build
+npm fund
+npm audit fix
+npm audit fix --force
 ```
 
 > React static files will be generated in `client/build`.
@@ -127,7 +134,9 @@ app.listen(PORT, () => {
 
 ```bash
 sudo npm install -g pm2
-cd /home/ec2-user/your-fullstack-repo/server
+npm install -g npm@11.2.0
+cd /home/ec2-user/aws-fullstack-cicd/server
+npm init -y
 npm install
 pm2 start index.js
 pm2 startup

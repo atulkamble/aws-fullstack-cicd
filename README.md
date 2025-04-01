@@ -1,272 +1,178 @@
-# aws-fullstack-cicd
-Full guide (with code and steps) to set up a **ReactJS frontend** and **Node.js backend** on the **same Amazon Linux EC2 (t2.micro)** instance, and configure **CI/CD with GitHub**.
+Here's a complete guide to **install Node.js on EC2 and configure CI/CD with GitHub** using a simple approach — ideal for projects that don’t use AWS CodePipeline but still want auto-deployment via GitHub.
 
 ---
 
-### 🛠️ Architecture Overview
+## ✅ **Part 1: Launch & Connect to EC2**
 
-- **Server**: Amazon Linux 2 (t2.micro)
-- **Frontend**: ReactJS (served as static files via Nginx or Express)
-- **Backend**: Node.js (Express)
-- **CI/CD**: GitHub + Webhook + Shell Script
-
----
-
-## ✅ Step-by-Step Setup
-
----
-
-### **1. Launch Amazon Linux 2 EC2 Instance**
-
-- Instance type: `t2.micro`
-- AMI: Amazon Linux 2
-- Security Group: Allow **ports 22 (SSH), 80 (HTTP), 3000, 5000** (for backend/frontend dev)
-
----
-
-### **2. Connect to EC2 and Install Required Packages**
-
+1. Launch EC2 (Amazon Linux 2023 or Ubuntu)
+2. Allow ports **22 (SSH)**, **3000**, and/or **80** in Security Group
+3. Connect via SSH:
 ```bash
-cd Downloads
-chmod 400 full-stack.pem
-ssh -i "full-stack.pem" ec2-user@ec2-34-205-16-42.compute-1.amazonaws.com
+ssh -i your-key.pem ec2-user@your-ec2-public-ip    # Amazon Linux
+# or
+ssh -i your-key.pem ubuntu@your-ec2-public-ip      # Ubuntu
 ```
+
+---
+
+## 📦 **Part 2: Install Node.js and Git**
+
+### For **Amazon Linux 2023**
+```bash
+sudo dnf install -y nodejs npm git
 ```
-sudo yum update -y
-sudo yum install git -y
+
+### For **Ubuntu**
+```bash
+sudo apt update
+sudo apt install -y nodejs npm git
+```
+
+Check:
+```bash
+node -v
+npm -v
 git --version
-sudo yum install curl -y
-curl --version
-sudo yum install nginx -y 
-nginx -v
-```
-```
-# Download and install nvm:
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
-
-# in lieu of restarting the shell
-\. "$HOME/.nvm/nvm.sh"
-
-# Download and install Node.js:
-nvm install 22
-
-# Verify the Node.js version:
-node -v # Should print "v22.14.0".
-nvm current # Should print "v22.14.0".
-
-# Verify npm version:
-npm -v # Should print "10.9.2".
-
-```
-
-> ⚠️ Node 18 is stable and compatible with most React/Express apps.
-
----
-
-### **3. Clone Your Repo from GitHub**
-
-```bash
-cd /home/ec2-user
-git clone https://github.com/atulkamble/aws-fullstack-cicd.git
-cd aws-fullstack-cicd
-```
-
-📁 Structure should be something like:
-```
-aws-fullstack-cicd/
-│
-├── client/     ← React App
-└── server/     ← Node.js Express API
 ```
 
 ---
 
-### **4. Build and Deploy React Frontend**
+## 🗂️ **Part 3: Clone GitHub Repo and Setup App**
 
+1. Clone your app repo:
 ```bash
-cd client
-npm init
-npm run
+git clone https://github.com/your-username/your-nodejs-app.git
+cd your-nodejs-app
+```
 
+2. Install dependencies:
+```bash
 npm install
-npm install react-scripts --save
-npm run build
-npm fund
-npm audit fix
-npm audit fix --force
 ```
 
-> React static files will be generated in `client/build`.
-
----
-
-### **5. Setup NodeJS Backend to Serve React and API**
-
-#### **Sample ExpressJS Backend (`server/index.js`)**
-
-```js
-const express = require("express");
-const path = require("path");
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Serve static files
-app.use(express.static(path.join(__dirname, "../client/build")));
-
-// API route
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "Hello from Node.js backend!" });
-});
-
-// Catch-all to serve React app
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/build/index.html"));
-});
-
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+3. Test your app:
+```bash
+node app.js
+# Or whatever your start command is
 ```
 
 ---
 
-### **6. Install PM2 to Keep Server Running**
+## 🔁 **Part 4: Setup PM2 to Keep App Running**
 
 ```bash
 sudo npm install -g pm2
-npm install -g npm@11.2.0
-cd /home/ec2-user/aws-fullstack-cicd/server
-npm init -y
-npm install
-pm2 start index.js
-pm2 startup
+pm2 start app.js     # or npm start or whatever runs your app
 pm2 save
+pm2 startup
 ```
 
 ---
 
-### **7. Setup Nginx (Optional - Reverse Proxy)**
+## ⚙️ **Part 5: Configure CI/CD via GitHub Webhooks**
 
-Edit Nginx config:
+You’ll auto-deploy the app whenever a push is made to GitHub.
+
+### 🛠️ Step 1: Setup a Deployment Script
+Create a script to pull the latest code and restart the app:
 
 ```bash
-sudo nano /etc/nginx/nginx.conf
+nano ~/deploy.sh
 ```
 
-Add this inside the `server` block (or default block):
-
-```nginx
-server {
-    listen 80;
-    server_name your-ec2-public-ip;
-
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Then restart nginx:
-
-```bash
-sudo systemctl restart nginx
-```
-
----
-
-### **8. Setup CI/CD with GitHub**
-
----
-
-#### **A. On EC2 – Create a Deployment Script**
-
-`deploy.sh` (in your repo root):
-
+Paste:
 ```bash
 #!/bin/bash
-cd /home/ec2-user/your-fullstack-repo
+cd /home/ec2-user/your-nodejs-app
 git pull origin main
-
-# Frontend
-cd client
 npm install
-npm run build
-
-# Backend
-cd ../server
-npm install
-pm2 restart index.js
+pm2 restart all
 ```
 
 Make it executable:
 ```bash
-chmod +x deploy.sh
+chmod +x ~/deploy.sh
 ```
 
 ---
 
-#### **B. Setup GitHub Webhook**
+### 🌐 Step 2: Install `ngrok` or Configure Nginx + SSL (Optional for HTTPS)
 
-1. Go to your GitHub repo → **Settings → Webhooks**
-2. Add webhook:
-   - **Payload URL**: `http://<your-ec2-ip>/webhook`
-   - **Content type**: `application/json`
-   - Secret: leave blank or use one
+For GitHub Webhooks to work, you need an HTTPS endpoint. If you don’t have a domain with SSL, you can temporarily use `ngrok`:
+
+```bash
+npm install -g ngrok
+ngrok http 3000
+```
+
+Use the HTTPS URL it gives for webhook in GitHub.
 
 ---
 
-#### **C. Setup a Webhook Listener (mini Express app)**
+### 🔐 Step 3: Create a GitHub Webhook
 
-Create `webhook-server.js`:
+1. Go to your GitHub repo → **Settings** → **Webhooks**
+2. Add a webhook:
+   - Payload URL: `http://your-ec2-ip:4000/webhook` (or your `ngrok` HTTPS URL)
+   - Content type: `application/json`
+   - Secret: *(optional)*
+   - Event: `Just the push event`
 
+---
+
+### 🧠 Step 4: Create a Webhook Listener (using Express)
+
+Install Express:
+```bash
+npm install express body-parser
+```
+
+Create `webhook.js`:
 ```js
-const http = require('http');
+const express = require('express');
+const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 
-http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/webhook') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      exec('/home/ec2-user/your-fullstack-repo/deploy.sh', (err, stdout, stderr) => {
-        if (err) console.error(`Deploy error: ${stderr}`);
-        else console.log(`Deploy output:\n${stdout}`);
-      });
-      res.end('Webhook received and deploy started.\n');
+const app = express();
+app.use(bodyParser.json());
+
+app.post('/webhook', (req, res) => {
+    console.log('GitHub Webhook triggered');
+    exec('sh ~/deploy.sh', (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Exec error: ${error}`);
+            return res.sendStatus(500);
+        }
+        console.log(stdout);
+        res.sendStatus(200);
     });
-  } else {
-    res.statusCode = 404;
-    res.end();
-  }
-}).listen(3000, () => console.log('Webhook listener on port 3000'));
+});
+
+app.listen(4000, () => {
+    console.log('Webhook listener running on port 4000');
+});
 ```
 
-Run the webhook listener:
+Run it:
 ```bash
-nohup node webhook-server.js &
+node webhook.js
 ```
 
----
-
-### ✅ Test the Setup
-
-1. Access your app at: `http://<EC2-IP>`
-2. Make a code push to GitHub → Webhook triggers deploy script.
-
----
-
-## 📦 BONUS: Save Everything to PM2
-
+You can also run this with PM2:
 ```bash
-pm2 start webhook-server.js
-pm2 save
+pm2 start webhook.js
 ```
 
 ---
 
+## 🎉 That’s It!
 
+Now every time you push code to GitHub, it will:
+- Trigger the webhook
+- Pull the latest code
+- Reinstall dependencies (if needed)
+- Restart the app with PM2
+
+---
+
+Would you like this as a **full GitHub repo template**, or want to use **AWS CodePipeline** instead for a managed CI/CD setup?

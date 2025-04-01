@@ -1,4 +1,4 @@
-Here's a complete guide to **install Node.js on EC2 and configure CI/CD with GitHub** using a simple approach — ideal for projects that don’t use AWS CodePipeline but still want auto-deployment via GitHub.
+Complete Guide to **install Node.js on EC2 and configure CI/CD with GitHub** using a simple approach — ideal for projects that don’t use AWS CodePipeline but still want auto-deployment via GitHub.
 
 ---
 

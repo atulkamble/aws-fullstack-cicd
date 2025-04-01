@@ -1,5 +1,9 @@
 Complete Guide to **install Node.js on EC2 and configure CI/CD with GitHub** using a simple approach — ideal for projects that don’t use AWS CodePipeline but still want auto-deployment via GitHub.
 
+References: 
+1. https://ngrok.com/downloads/linux?tab=snap
+2. https://dashboard.ngrok.com/signup
+3. https://dashboard.ngrok.com/get-started/your-authtoken
 ---
 
 ## ✅ **Part 1: Launch & Connect to EC2**
@@ -8,9 +12,9 @@ Complete Guide to **install Node.js on EC2 and configure CI/CD with GitHub** usi
 2. Allow ports **22 (SSH)**, **3000**, and/or **80** in Security Group
 3. Connect via SSH:
 ```bash
-ssh -i your-key.pem ec2-user@your-ec2-public-ip    # Amazon Linux
-# or
-ssh -i your-key.pem ubuntu@your-ec2-public-ip      # Ubuntu
+cd Downloads
+chmod 400 nodejs.pem
+ssh -i "nodejs.pem" ec2-user@ec2-54-210-164-87.compute-1.amazonaws.com
 ```
 
 ---
@@ -19,13 +23,8 @@ ssh -i your-key.pem ubuntu@your-ec2-public-ip      # Ubuntu
 
 ### For **Amazon Linux 2023**
 ```bash
+sudo dnf update -y
 sudo dnf install -y nodejs npm git
-```
-
-### For **Ubuntu**
-```bash
-sudo apt update
-sudo apt install -y nodejs npm git
 ```
 
 Check:
@@ -41,12 +40,13 @@ git --version
 
 1. Clone your app repo:
 ```bash
-git clone https://github.com/your-username/your-nodejs-app.git
-cd your-nodejs-app
+git clone https://github.com/atulkamble/ec2-nodejs-cicd.git
+cd ec2-nodejs-cicd
 ```
 
 2. Install dependencies:
 ```bash
+npm init
 npm install
 ```
 
@@ -77,7 +77,7 @@ You’ll auto-deploy the app whenever a push is made to GitHub.
 Create a script to pull the latest code and restart the app:
 
 ```bash
-nano ~/deploy.sh
+nano deploy.sh
 ```
 
 Paste:
@@ -91,7 +91,7 @@ pm2 restart all
 
 Make it executable:
 ```bash
-chmod +x ~/deploy.sh
+chmod +x deploy.sh
 ```
 
 ---
@@ -101,8 +101,23 @@ chmod +x ~/deploy.sh
 For GitHub Webhooks to work, you need an HTTPS endpoint. If you don’t have a domain with SSL, you can temporarily use `ngrok`:
 
 ```bash
-npm install -g ngrok
-ngrok http 3000
+npm install ngrok
+npm fund
+npm install 
+
+npm install nodemon-ngrok-webpack-plugin
+npm fund
+npm audit fix
+
+sudo wget -O /etc/yum.repos.d/snapd.repo https://bboozzoo.github.io/snapd-amazon-linux/al2023/snapd.repo
+sudo dnf install snapd -y
+snap install ngrok
+
+// sudo ngrok config add-authtoken 2v847WRCBUgH3HltVzyLizJfJOO_6Paqx88oRHn7qZqT9u8u5
+
+sudo ngrok http 3000
+
+// Cntrl+C
 ```
 
 Use the HTTPS URL it gives for webhook in GitHub.
@@ -114,6 +129,11 @@ Use the HTTPS URL it gives for webhook in GitHub.
 1. Go to your GitHub repo → **Settings** → **Webhooks**
 2. Add a webhook:
    - Payload URL: `http://your-ec2-ip:4000/webhook` (or your `ngrok` HTTPS URL)
+
+http://54.210.164.87:4000/webhook
+https://e3e6-54-210-164-87.ngrok-fr
+
+                              
    - Content type: `application/json`
    - Secret: *(optional)*
    - Event: `Just the push event`
